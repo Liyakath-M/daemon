@@ -287,7 +287,7 @@ func (sh *serviceHandler) Execute(args []string, r <-chan svc.ChangeRequest, cha
 	slowtick := time.Tick(2 * time.Second)
 	tick := fasttick
 
-	sh.executable.Start()
+	sh.executable.Start(uint64(svc.StatusHandle()))
 	changes <- svc.Status{State: svc.Running, Accepts: cmdsAccepted}
 
 loop:

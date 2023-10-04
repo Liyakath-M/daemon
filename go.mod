@@ -1,4 +1,4 @@
-module github.com/takama/daemon
+module github.com/Liyakath-M/daemon
 
 go 1.14
 
