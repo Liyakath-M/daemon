@@ -15,6 +15,7 @@ import (
 	"unicode/utf16"
 	"unsafe"
 
+	"golang.org/x/sys/windows"
 	"golang.org/x/sys/windows/registry"
 	"golang.org/x/sys/windows/svc"
 	"golang.org/x/sys/windows/svc/mgr"
@@ -288,7 +289,8 @@ func (sh *serviceHandler) Execute(args []string, r <-chan svc.ChangeRequest, cha
 	tick := fasttick
 
 	sh.executable.Start(uint64(svc.StatusHandle()))
-	changes <- svc.Status{State: svc.Running, Accepts: cmdsAccepted}
+	//changes <- svc.Status{State: svc.Running, Accepts: cmdsAccepted}
+	changes <- svc.Status{State: svc.Running, Accepts: 0}
 
 loop:
 	for {
@@ -301,7 +303,15 @@ loop:
 				changes <- c.CurrentStatus
 				// Testing deadlock from https://code.google.com/p/winsvc/issues/detail?id=4
 				time.Sleep(100 * time.Millisecond)
-				changes <- c.CurrentStatus
+				//changes <- c.CurrentStatus
+				changes <- svc.Status{State: svc.Running, Accepts: cmdsAccepted}
+				status := windows.SERVICE_STATUS{
+					ServiceType:      0x10, // SERVICE_WIN32_OWN_PROCESS
+					CurrentState:     windows.SERVICE_RUNNING,
+					ControlsAccepted: 15,
+				}
+				windows.SetServiceStatus(svc.StatusHandle(), &status)
+
 			case svc.Stop, svc.Shutdown:
 				changes <- svc.Status{State: svc.StopPending}
 				sh.executable.Stop()
