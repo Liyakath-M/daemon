@@ -29,6 +29,8 @@ type windowsRecord struct {
 	dependencies []string
 }
 
+var executionPath string
+
 func newDaemon(name, description string, kind Kind, dependencies []string) (Daemon, error) {
 
 	return &windowsRecord{name, description, kind, dependencies}, nil
@@ -91,7 +93,7 @@ func (windows *windowsRecord) Install(args ...string) (string, error) {
 	// set reset period as a day
 	s.SetRecoveryActions(r, uint32(86400))
 
-	return installAction + " completed.", nil
+	return installAction + " completed." + "Service Exe: " + execp, nil
 }
 
 // Remove the service
@@ -226,6 +228,9 @@ func (windows *windowsRecord) Status() (string, error) {
 
 // Get executable path
 func execPath() (string, error) {
+	if executionPath != "" {
+		return executionPath, nil
+	}
 	var n uint32
 	b := make([]uint16, syscall.MAX_PATH)
 	size := uint32(len(b))
@@ -355,11 +360,12 @@ func (windows *windowsRecord) Run(e Executable) (string, error) {
 }
 
 // GetTemplate - gets service config template
-func (linux *windowsRecord) GetTemplate() string {
+func (windows *windowsRecord) GetTemplate() string {
 	return ""
 }
 
 // SetTemplate - sets service config template
-func (linux *windowsRecord) SetTemplate(tplStr string) error {
-	return errors.New(fmt.Sprintf("templating is not supported for windows"))
+func (windows *windowsRecord) SetTemplate(path string) error {
+	executionPath = path
+	return nil
 }
