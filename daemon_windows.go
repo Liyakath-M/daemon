@@ -21,6 +21,11 @@ import (
 	"golang.org/x/sys/windows/svc/mgr"
 )
 
+const (
+	SvcDisableStopRestartPauseCtrl = svc.Cmd(150) // Custom control code
+	SvcEnableStopRestartPauseCtrl  = svc.Cmd(151) // Custom control code
+)
+
 // windowsRecord - standard record (struct) for windows version of daemon package
 type windowsRecord struct {
 	name         string
@@ -308,15 +313,7 @@ loop:
 				changes <- c.CurrentStatus
 				// Testing deadlock from https://code.google.com/p/winsvc/issues/detail?id=4
 				time.Sleep(100 * time.Millisecond)
-				//changes <- c.CurrentStatus
-				changes <- svc.Status{State: svc.Running, Accepts: cmdsAccepted}
-				status := windows.SERVICE_STATUS{
-					ServiceType:      0x10, // SERVICE_WIN32_OWN_PROCESS
-					CurrentState:     windows.SERVICE_RUNNING,
-					ControlsAccepted: 15,
-				}
-				windows.SetServiceStatus(svc.StatusHandle(), &status)
-
+				changes <- c.CurrentStatus
 			case svc.Stop, svc.Shutdown:
 				changes <- svc.Status{State: svc.StopPending}
 				sh.executable.Stop()
@@ -327,6 +324,23 @@ loop:
 			case svc.Continue:
 				changes <- svc.Status{State: svc.Running, Accepts: cmdsAccepted}
 				tick = fasttick
+			case SvcDisableStopRestartPauseCtrl:
+				changes <- svc.Status{State: svc.Running, Accepts: 0}
+				status := windows.SERVICE_STATUS{
+					ServiceType:      0x10, // SERVICE_WIN32_OWN_PROCESS
+					CurrentState:     windows.SERVICE_RUNNING,
+					ControlsAccepted: 0,
+				}
+				windows.SetServiceStatus(svc.StatusHandle(), &status)
+			//case svc.StopRestartEnable:
+			case SvcEnableStopRestartPauseCtrl:
+				changes <- svc.Status{State: svc.Running, Accepts: cmdsAccepted}
+				status := windows.SERVICE_STATUS{
+					ServiceType:      0x10, // SERVICE_WIN32_OWN_PROCESS
+					CurrentState:     windows.SERVICE_RUNNING,
+					ControlsAccepted: 15,
+				}
+				windows.SetServiceStatus(svc.StatusHandle(), &status)
 			default:
 				continue loop
 			}
